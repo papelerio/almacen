@@ -1,6 +1,6 @@
-// animator.js - Versión mejorada para IAs
+// animator.js - Versión corregida
 class Animator {
-    constructor(config = null, canvas = null) {
+    constructor() {
         this.animations = new Map();
         this.currentAnimation = null;
         this.currentFrame = 0;
@@ -8,62 +8,67 @@ class Animator {
         this.loop = true;
         this.frameTime = 0;
         this.lastUpdate = 0;
-        this.canvas = canvas;
-        this.ctx = canvas ? canvas.getContext('2d') : null;
+        this.canvas = null;
+        this.ctx = null;
         this.spriteSheet = null;
-        
-        if (config) {
-            this.init(config);
-        }
+        this.spriteSheetLoaded = false;
     }
 
-    // MÉTODO SINCRÓNICO para IAs (nuevo)
-    init(config) {
-        this.config = config;
-        this._setupAnimations(config);
-        return this;
-    }
-
-    // MÉTODO ASÍNCRONO original (mantener compatibilidad)
     static async load(jsonUrl, spriteSheetUrl = null) {
         const animator = new Animator();
         await animator._loadConfig(jsonUrl, spriteSheetUrl);
         return animator;
     }
 
-    // Cargar desde JSON directamente (nuevo - para IAs)
-    static fromJSON(jsonData, canvas = null) {
-        const animator = new Animator();
-        animator.config = jsonData;
-        animator._setupAnimations(jsonData);
-        if (canvas) animator.setCanvas(canvas);
-        return animator;
-    }
-
     async _loadConfig(jsonUrl, spriteSheetUrl) {
-        const response = await fetch(jsonUrl);
-        const config = await response.json();
-        this.config = config;
-        
-        const sheetUrl = spriteSheetUrl || config.spriteSheet;
-        if (sheetUrl) {
+        try {
+            console.log('📥 Cargando JSON...', jsonUrl);
+            const response = await fetch(jsonUrl);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const config = await response.json();
+            console.log('✅ JSON cargado:', config);
+            
+            // Usar la URL del spritesheet del JSON o la proporcionada
+            const sheetUrl = spriteSheetUrl || config.spriteSheet;
+            if (!sheetUrl) throw new Error('No se encontró URL del spritesheet');
+            
+            console.log('🖼️ Cargando spritesheet...', sheetUrl);
             await this._loadSpriteSheet(sheetUrl);
+            
+            this._setupAnimations(config);
+            console.log('🎬 Animator configurado correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error en _loadConfig:', error);
+            throw error;
         }
-        
-        this._setupAnimations(config);
     }
 
     async _loadSpriteSheet(url) {
         return new Promise((resolve, reject) => {
             this.spriteSheet = new Image();
-            this.spriteSheet.onload = resolve;
-            this.spriteSheet.onerror = reject;
+            this.spriteSheet.crossOrigin = "anonymous"; // Important para imágenes externas
+            
+            this.spriteSheet.onload = () => {
+                console.log('✅ Spritesheet cargado:', this.spriteSheet.width, 'x', this.spriteSheet.height);
+                this.spriteSheetLoaded = true;
+                resolve();
+            };
+            
+            this.spriteSheet.onerror = (err) => {
+                console.error('❌ Error cargando spritesheet:', err);
+                reject(new Error(`No se pudo cargar el spritesheet: ${url}`));
+            };
+            
             this.spriteSheet.src = url;
         });
     }
 
     _setupAnimations(config) {
         this.animations.clear();
+        this.config = config;
+        
         for (const [name, animConfig] of Object.entries(config.animations)) {
             this.animations.set(name, {
                 frames: animConfig.frames,
@@ -79,15 +84,28 @@ class Animator {
     setCanvas(canvasElement) {
         this.canvas = canvasElement;
         this.ctx = canvasElement.getContext('2d');
+        
+        // Ajustar tamaño del canvas al tamaño del frame
+        const firstAnim = this.animations.values().next().value;
+        if (firstAnim) {
+            this.canvas.width = firstAnim.width;
+            this.canvas.height = firstAnim.height;
+        }
+        
         return this;
     }
 
     play(animationName = null, loop = true) {
+        if (!this.spriteSheetLoaded) {
+            console.warn('⚠️ Spritesheet no cargado aún');
+            return;
+        }
+
         const name = animationName || Object.keys(this.config.animations)[0];
         const animation = this.animations.get(name);
         
         if (!animation) {
-            console.warn(`Animation "${name}" not found`);
+            console.warn(`❌ Animación "${name}" no encontrada`);
             return;
         }
 
@@ -98,26 +116,34 @@ class Animator {
         this.frameTime = animation.frameTime;
         this.lastUpdate = performance.now();
 
+        console.log('▶️ Reproduciendo animación:', name);
         this._animate();
     }
 
-    // ... (resto de métodos igual)
     _animate() {
-        if (!this.isPlaying || !this.ctx) return;
+        if (!this.isPlaying || !this.ctx || !this.spriteSheetLoaded) return;
 
         const now = performance.now();
         const delta = now - this.lastUpdate;
         const animation = this.animations.get(this.currentAnimation);
 
-        if (delta >= this.frameTime) {
+        if (delta >= animation.frameTime) {
             this.currentFrame++;
+            
             if (this.currentFrame >= animation.frames) {
-                this.currentFrame = this.loop ? 0 : animation.frames - 1;
-                if (!this.loop) this.isPlaying = false;
+                if (this.loop) {
+                    this.currentFrame = 0;
+                } else {
+                    this.currentFrame = animation.frames - 1;
+                    this.isPlaying = false;
+                    console.log('⏹️ Animación terminada');
+                }
             }
+
             this._drawFrame();
             this.lastUpdate = now;
         }
+
         requestAnimationFrame(() => this._animate());
     }
 
@@ -125,21 +151,57 @@ class Animator {
         if (!this.ctx || !this.spriteSheet) return;
 
         const animation = this.animations.get(this.currentAnimation);
+        
+        // Calcular posición en el spritesheet
         const cols = Math.floor(this.spriteSheet.width / animation.width);
         const col = this.currentFrame % cols;
         const row = Math.floor(this.currentFrame / cols);
         
+        const sx = col * animation.width;
+        const sy = row * animation.height;
+
+        // Limpiar y dibujar
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.drawImage(
             this.spriteSheet,
-            col * animation.width, row * animation.height,
-            animation.width, animation.height,
+            sx, sy, animation.width, animation.height,
             0, 0, animation.width, animation.height
         );
     }
 
-    pause() { this.isPlaying = false; }
-    stop() { this.isPlaying = false; this.currentFrame = 0; this._drawFrame(); }
+    pause() {
+        this.isPlaying = false;
+        console.log('⏸️ Animación pausada');
+    }
+
+    stop() {
+        this.isPlaying = false;
+        this.currentFrame = 0;
+        this._drawFrame();
+        console.log('⏹️ Animación detenida');
+    }
+
+    onFrameChange(callback) {
+        this.onFrameChangeCallback = callback;
+        return this;
+    }
+
+    getCurrentAnimation() {
+        return this.currentAnimation;
+    }
+
+    getCurrentFrame() {
+        return this.currentFrame;
+    }
+
+    getTotalFrames() {
+        const animation = this.animations.get(this.currentAnimation);
+        return animation ? animation.frames : 0;
+    }
+
+    getAnimationNames() {
+        return Array.from(this.animations.keys());
+    }
 }
 
 window.Animator = Animator;
