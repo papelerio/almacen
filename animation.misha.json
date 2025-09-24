@@ -1,0 +1,12 @@
+{
+  "spriteSheet": "https://i.ibb.co/35bL3HxX/mishita.png",
+  "animations": {
+    "animation": {
+      "frames": 6,
+      "width": 500,
+      "height": 500,
+      "speed": 0.4,
+      "loop": true
+    }
+  }
+}
