@@ -1,0 +1,37 @@
+{
+  "nombre": "menu principal",
+  "cuadros": [
+    {
+      "nombre": "fondo",
+      "x": -5.503472222222202,
+      "y": 52.35532407407407,
+      "alto": 50.324074074074154,
+      "ancho": 52.77777777777759,
+      "url": "https://purina.cl/sites/default/files/2025-04/razas-de-gatos.jpg"
+    },
+    {
+      "nombre": "logo",
+      "x": 28.138888888888893,
+      "y": 1.134259259259246,
+      "alto": 46.38888888888887,
+      "ancho": 40.694444444444365,
+      "url": "https://i.ibb.co/cXKxhJfS/logo.png"
+    },
+    {
+      "nombre": "boton.start",
+      "x": 57.96874999999992,
+      "y": 56.73611111111112,
+      "alto": 21.388888888888832,
+      "ancho": 27.916666666666696,
+      "url": "https://i.ibb.co/G3BzgRvM/image.png"
+    },
+    {
+      "nombre": "fondo",
+      "x": 65.21874999999999,
+      "y": 79.68749999999999,
+      "alto": 15.572916666666666,
+      "ancho": 13.90625,
+      "url": "https://onlyfresh.com/cdn/shop/articles/AManova_diarrea_nei_gatti.jpg?v=1643195698&width=1100"
+    }
+  ]
+}
