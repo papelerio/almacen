@@ -1,0 +1,12 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/papelerio/almacen/refs/heads/main/menuprincipal.json",
+    "orden": 1,
+    "tag": "flash"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/papelerio/almacen/refs/heads/main/interfascontroles.json",
+    "orden": 0,
+    "tag": "flash"
+  }
+]
