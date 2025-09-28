@@ -2,7 +2,7 @@
   {
     "nombre": "menu",
     "url": "https://raw.githubusercontent.com/papelerio/almacen/refs/heads/main/menuprincipal.json",
-    "orden": 1,
+    "orden": 2,
     "tag": "flash"
   },
   {
@@ -10,5 +10,11 @@
     "url": "https://raw.githubusercontent.com/papelerio/almacen/refs/heads/main/interfascontroles.json",
     "orden": 0,
     "tag": "interfaz"
+  },
+  {
+    "nombre": "inicio",
+    "url": "https://raw.githubusercontent.com/papelerio/almacen/refs/heads/main/inicio.json",
+    "orden": 1,
+    "tag": "flash"
   }
 ]
