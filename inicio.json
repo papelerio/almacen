@@ -1,0 +1,21 @@
+{
+  "nombre": "inicio",
+  "cuadros": [
+    {
+      "nombre": "coordenada.carga",
+      "x": 47.55208333333337,
+      "y": 87.22222222222229,
+      "alto": 4.259259259259265,
+      "ancho": 2.291666666666643,
+      "url": "https://i.ibb.co/n8V2FLZ9/Image.png"
+    },
+    {
+      "nombre": "boton.activacion",
+      "x": 40.26041666666668,
+      "y": 31.203703703703688,
+      "alto": 29.104938271604937,
+      "ancho": 16.701388888888875,
+      "url": "https://cdn-icons-png.flaticon.com/512/2468/2468825.png"
+    }
+  ]
+}
