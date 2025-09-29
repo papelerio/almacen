@@ -11,7 +11,13 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+        img {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+            outline: none;
+        }
         body {
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
             min-height: 100vh;
@@ -100,6 +106,11 @@
         .boton {
             cursor: pointer;
             transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
         }
         
         .boton:hover {
@@ -114,6 +125,33 @@
         
         .fondo {
             /* Los fondos son estáticos por defecto */
+        }
+        
+        /* Nuevos estilos para coordenada.carga */
+        .coordenada-carga {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .barra-progreso {
+            height: 100%;
+            background: linear-gradient(to right, #4a6fc9, #2a4ba0);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 8px;
+        }
+        
+        .texto-progreso {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            font-size: 14px;
         }
         
         /* Tags NUCLEO para capas completas */
@@ -255,6 +293,10 @@
         let capasActivas = [];
         let indiceMenuActual = 0;
         let currentImageMode = 'fill';
+        let audioPermitido = false;
+        let enProcesoDeCarga = false;
+        let menusParaPrecargar = [];
+        let imagenesPrecargadas = new Set(); // Para evitar duplicados
 
         // Referencias a elementos DOM
         const menuContainer = document.getElementById('menuContainer');
@@ -368,19 +410,42 @@
                 element.style.width = cuadro.ancho + '%';
                 element.style.height = cuadro.alto + '%';
                 
-                // Crear imagen
-                const img = document.createElement('img');
-                img.src = cuadro.url;
-                img.alt = cuadro.nombre;
-                img.style.objectFit = currentImageMode;
-                
-                // Manejar errores de imagen
-                img.onerror = function() {
-                    console.error(`Error al cargar imagen: ${cuadro.url}`);
-                    this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIj5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+';
-                };
-                
-                element.appendChild(img);
+                // Verificar si es un elemento de coordenada (no mostrar imagen)
+                if (cuadro.nombre.startsWith('coordenada.')) {
+                    // Aplicar clase para coordenadas
+                    element.classList.add('coordenada');
+                    
+                    // Si es coordenada.carga, crear la barra de progreso
+                    if (cuadro.nombre === 'coordenada.carga') {
+                        element.classList.add('coordenada-carga');
+                        
+                        const barraProgreso = document.createElement('div');
+                        barraProgreso.className = 'barra-progreso';
+                        barraProgreso.id = 'barraProgreso';
+                        
+                        const textoProgreso = document.createElement('div');
+                        textoProgreso.className = 'texto-progreso';
+                        textoProgreso.id = 'textoProgreso';
+                        textoProgreso.textContent = '0%';
+                        
+                        element.appendChild(barraProgreso);
+                        element.appendChild(textoProgreso);
+                    }
+                } else {
+                    // Crear imagen solo si no es una coordenada
+                    const img = document.createElement('img');
+                    img.src = cuadro.url;
+                    img.alt = cuadro.nombre;
+                    img.style.objectFit = currentImageMode;
+                    
+                    // Manejar errores de imagen
+                    img.onerror = function() {
+                        console.error(`Error al cargar imagen: ${cuadro.url}`);
+                        this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIj5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+';
+                    };
+                    
+                    element.appendChild(img);
+                }
                 
                 // Aplicar tags MINI según el nombre
                 if (cuadro.nombre === 'fondo') {
@@ -393,6 +458,9 @@
                         if (cuadro.nombre === 'boton.start') {
                             // Desplegar menú "controles"
                             cargarMenuInterfaz('controles');
+                        } else if (cuadro.nombre === 'boton.activacion') {
+                            // Activar sonidos y comenzar precarga
+                            activarSonidosYPrecarga();
                         } else {
                             // Efecto para otros botones
                             this.style.transform = 'scale(0.9)';
@@ -410,6 +478,181 @@
             
             menuContainer.appendChild(capa);
             capasActivas.push(capa);
+        }
+
+        // Función para activar sonidos y comenzar precarga
+        function activarSonidosYPrecarga() {
+            if (enProcesoDeCarga) return;
+            
+            // Marcar que los sonidos están permitidos
+            audioPermitido = true;
+            console.log('Sonidos activados - precarga iniciada');
+            
+            // Ocultar el botón de activación
+            const botonActivacion = document.querySelector('.boton.activacion');
+            if (botonActivacion) {
+                botonActivacion.style.display = 'none';
+            }
+            
+            // Iniciar proceso de precarga
+            iniciarPrecarga();
+        }
+
+        // Función para iniciar la precarga de menús e imágenes
+        async function iniciarPrecarga() {
+            enProcesoDeCarga = true;
+            
+            // Obtener menús para precargar (próximos 2-5 menús y el menú "controles")
+            const menusPrincipales = nucleoData.filter(menu => menu.orden > 0);
+            const indiceActual = menusPrincipales.findIndex(menu => menu.orden === nucleoData[indiceMenuActual].orden);
+            
+            // Determinar cuántos menús precargar (entre 2 y 5)
+            const cantidadPrecarga = Math.min(5, Math.max(2, menusPrincipales.length - indiceActual - 1));
+            
+            // Obtener menús para precargar
+            menusParaPrecargar = [];
+            
+            // Agregar menú "controles" si existe
+            const menuControles = nucleoData.find(menu => menu.nombre === 'controles' && menu.orden === 0);
+            if (menuControles) {
+                menusParaPrecargar.push(menuControles);
+            }
+            
+            // Agregar los siguientes menús principales
+            for (let i = 1; i <= cantidadPrecarga; i++) {
+                if (indiceActual + i < menusPrincipales.length) {
+                    menusParaPrecargar.push(menusPrincipales[indiceActual + i]);
+                }
+            }
+            
+            // Iniciar barra de progreso
+            actualizarBarraProgreso(0, `Preparando... (0/${menusParaPrecargar.length})`);
+            
+            // Precargar menús y sus imágenes
+            let totalImagenes = 0;
+            let imagenesCargadas = 0;
+            
+            // Primero contar todas las imágenes que necesitamos precargar
+            for (let i = 0; i < menusParaPrecargar.length; i++) {
+                const menu = menusParaPrecargar[i];
+                
+                try {
+                    // Cargar el JSON del menú si no está cargado
+                    if (!menusCargados[menu.url]) {
+                        const response = await fetch(menu.url);
+                        if (response.ok) {
+                            const menuData = await response.json();
+                            menusCargados[menu.url] = menuData;
+                            
+                            // Contar imágenes en este menú (excluyendo coordenadas)
+                            menuData.cuadros.forEach(cuadro => {
+                                if (!cuadro.nombre.startsWith('coordenada.') && cuadro.url) {
+                                    totalImagenes++;
+                                }
+                            });
+                        }
+                    } else {
+                        // Si ya está cargado, contar sus imágenes
+                        menusCargados[menu.url].cuadros.forEach(cuadro => {
+                            if (!cuadro.nombre.startsWith('coordenada.') && cuadro.url) {
+                                totalImagenes++;
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error al precargar menú ${menu.nombre}:`, error);
+                }
+            }
+            
+            console.log(`Total de imágenes a precargar: ${totalImagenes}`);
+            
+            // Ahora precargar todas las imágenes
+            for (let i = 0; i < menusParaPrecargar.length; i++) {
+                const menu = menusParaPrecargar[i];
+                const menuData = menusCargados[menu.url];
+                
+                if (menuData && menuData.cuadros) {
+                    // Precargar cada imagen de este menú
+                    for (const cuadro of menuData.cuadros) {
+                        if (!cuadro.nombre.startsWith('coordenada.') && cuadro.url && !imagenesPrecargadas.has(cuadro.url)) {
+                            try {
+                                await precargarImagen(cuadro.url);
+                                imagenesPrecargadas.add(cuadro.url);
+                                imagenesCargadas++;
+                                
+                                // Actualizar progreso combinado (menús + imágenes)
+                                const progresoMenus = (i / menusParaPrecargar.length) * 50;
+                                const progresoImagenes = (imagenesCargadas / totalImagenes) * 50;
+                                const progresoTotal = Math.round(progresoMenus + progresoImagenes);
+                                
+                                actualizarBarraProgreso(
+                                    progresoTotal, 
+                                    `Cargando imágenes... (${imagenesCargadas}/${totalImagenes})`
+                                );
+                                
+                            } catch (error) {
+                                console.error(`Error al precargar imagen ${cuadro.url}:`, error);
+                            }
+                        }
+                    }
+                }
+                
+                // Actualizar progreso después de cada menú
+                const progresoMenus = ((i + 1) / menusParaPrecargar.length) * 100;
+                actualizarBarraProgreso(
+                    Math.round(progresoMenus), 
+                    `Cargando menús... (${i + 1}/${menusParaPrecargar.length})`
+                );
+                
+                // Pequeña pausa para visualización
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // Completar carga
+            actualizarBarraProgreso(100, '¡Completado!');
+            
+            // Esperar un momento y avanzar al siguiente menú
+            setTimeout(() => {
+                avanzarAlSiguienteMenu();
+                enProcesoDeCarga = false;
+            }, 800);
+        }
+
+        // Función para precargar una imagen
+        function precargarImagen(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Error al cargar imagen: ${url}`));
+                img.src = url;
+            });
+        }
+
+        // Función para actualizar la barra de progreso
+        function actualizarBarraProgreso(porcentaje, texto) {
+            const barraProgreso = document.getElementById('barraProgreso');
+            const textoProgreso = document.getElementById('textoProgreso');
+            
+            if (barraProgreso) {
+                barraProgreso.style.width = porcentaje + '%';
+            }
+            
+            if (textoProgreso) {
+                textoProgreso.textContent = texto;
+            }
+        }
+
+        // Función para avanzar al siguiente menú
+        function avanzarAlSiguienteMenu() {
+            const menusPrincipales = nucleoData.filter(menu => menu.orden > 0);
+            const indiceActual = menusPrincipales.findIndex(menu => menu.orden === nucleoData[indiceMenuActual].orden);
+            
+            if (indiceActual + 1 < menusPrincipales.length) {
+                const siguienteMenu = menusPrincipales[indiceActual + 1];
+                const indiceSiguiente = nucleoData.findIndex(menu => menu.url === siguienteMenu.url);
+                cargarMenuPorIndice(indiceSiguiente);
+            }
         }
 
         // Función para cargar un menú de interfaz por nombre
@@ -461,17 +704,40 @@
                 element.style.width = cuadro.ancho + '%';
                 element.style.height = cuadro.alto + '%';
                 
-                const img = document.createElement('img');
-                img.src = cuadro.url;
-                img.alt = cuadro.nombre;
-                img.style.objectFit = currentImageMode;
-                
-                img.onerror = function() {
-                    console.error(`Error al cargar imagen: ${cuadro.url}`);
-                    this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIj5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+';
-                };
-                
-                element.appendChild(img);
+                // Verificar si es un elemento de coordenada (no mostrar imagen)
+                if (cuadro.nombre.startsWith('coordenada.')) {
+                    element.classList.add('coordenada');
+                    
+                    // Si es coordenada.carga, crear la barra de progreso
+                    if (cuadro.nombre === 'coordenada.carga') {
+                        element.classList.add('coordenada-carga');
+                        
+                        const barraProgreso = document.createElement('div');
+                        barraProgreso.className = 'barra-progreso';
+                        barraProgreso.id = 'barraProgreso';
+                        
+                        const textoProgreso = document.createElement('div');
+                        textoProgreso.className = 'texto-progreso';
+                        textoProgreso.id = 'textoProgreso';
+                        textoProgreso.textContent = '0%';
+                        
+                        element.appendChild(barraProgreso);
+                        element.appendChild(textoProgreso);
+                    }
+                } else {
+                    // Crear imagen solo si no es una coordenada
+                    const img = document.createElement('img');
+                    img.src = cuadro.url;
+                    img.alt = cuadro.nombre;
+                    img.style.objectFit = currentImageMode;
+                    
+                    img.onerror = function() {
+                        console.error(`Error al cargar imagen: ${cuadro.url}`);
+                        this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIj5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+';
+                    };
+                    
+                    element.appendChild(img);
+                }
                 
                 // Aplicar tags MINI
                 if (cuadro.nombre === 'fondo') {
